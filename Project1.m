@@ -21,8 +21,8 @@ UNIPOLAR_NRZ = data * A;         % 0 maps to 0, 1 maps to A
 POLAR_RZ = ((2*data)-1)*A;       % 0 maps to 0, 1 maps to A
 %% Samples generation
 POLAR_NRZ_samples = repelem(POLAR_NRZ, 1, samples_num);  %converts each bit into a sampled waveform.
-UNI_NRZ_samples = repelem(UNIPOLAR_NRZ, 1, samples); 
-POLAR_RZ_samples = repelem(POLAR_RZ, 1, samples); 
+UNI_NRZ_samples = repelem(UNIPOLAR_NRZ, 1, samples_num); 
+POLAR_RZ_samples = repelem(POLAR_RZ, 1, samples_num); 
 %% Return to zero logic
 POLAR_return_to_zero = POLAR_RZ_samples;
 for counter_realization = 1 : realization_num
@@ -250,81 +250,38 @@ plot(1:realization_num, repmat(mean_across_time_POLAR_RZ, realization_num, 1));
 title('Mean Across time for Polar RZ');
 xlabel('Realization');
 ylabel('Amplitude');
+%% Bandwidth calculation
+% Define the frequency axis
+Fs = 1 / ts; % Sampling frequency
+N = length(UNI_NRZ); % Length of the autocorrelation function
+f = linspace(-Fs/2, Fs/2, N); % Frequency axis 
 
-%% Chat Gpt 
-window_size = 50; % Adjust this to smooth variations
-smoothed_mean = movmean(mean(POLAR_NRZ_delayed, 1), window_size);
+% Calculate the power spectral density using the autocorrelation of the ensemble
+PSD_POLAR_NRZ = abs( fftshift(fft(POLAR_NRZ) /(Fs) ) );
+PSD_UNIPOLAR_NRZ =  abs( fftshift( fft( UNI_NRZ ) /(Fs) ) ) ;
+PSD_POLAR_RZ = abs( fftshift(fft(POLAR_RZ) /(Fs) ) );
 
+% Polar NRZ
 figure;
-plot(t, smoothed_mean, 'r', 'LineWidth', 2);
-title('Smoothed Statistical Mean for Polar NRZ');
-xlabel('Time (s)');
-ylabel('Amplitude');
-grid on;
+plot(f, PSD_POLAR_NRZ);
+title('Power Spectral Density for Polar NRZ');
+xlabel('Frequency (Hz)');
+ylabel('Power/Frequency');
 
+% Unipolar NRZ
+figure;
+plot(f, PSD_UNIPOLAR_NRZ);
+title('Power Spectral Density for Unipolar NRZ');
+xlabel('Frequency (Hz)');
+ylabel('Power/Frequency');
 
-check_stationarity_ergodicity(POLAR_NRZ_delayed);
-check_stationarity_ergodicity(UNIPOLAR_NRZ_delayed);
-check_stationarity_ergodicity(POLAR_RZ_delayed);
-function check_stationarity_ergodicity(signal)
-    % Function to check if a signal is Stationary and Ergodic
-    % signal: Matrix (num_realizations x num_samples)
-    
-    % Get dimensions
-    [num_realizations, num_samples] = size(signal);
-    
-    % 1️⃣ 📌 Compute Statistical Mean Across Realizations
-    ensemble_mean = mean(signal, 1); % Mean at each time step
-    
-    % 2️⃣ 📌 Compute Variance Over Time Windows (Stationarity Test)
-    window_size = 50; % Choose a suitable window size
-    num_windows = floor(num_samples / window_size);
-    mean_variations = zeros(1, num_windows);
-    var_variations = zeros(1, num_windows);
-    
-    for i = 1:num_windows
-        start_idx = (i - 1) * window_size + 1;
-        end_idx = start_idx + window_size - 1;
-        segment = ensemble_mean(start_idx:end_idx);
-        
-        mean_variations(i) = mean(segment);
-        var_variations(i) = var(segment);
-    end
-    
-    % 📊 Plot Mean and Variance over Time Segments
-    figure;
-    subplot(2,1,1);
-    plot(mean_variations, 'r', 'LineWidth', 2);
-    title('Mean Across Time Segments');
-    xlabel('Time Segment');
-    ylabel('Mean Value');
-    
-    subplot(2,1,2);
-    plot(var_variations, 'b', 'LineWidth', 2);
-    title('Variance Across Time Segments');
-    xlabel('Time Segment');
-    ylabel('Variance');
-    
-    % 📝 Stationarity Conclusion
-    if max(var_variations) - min(var_variations) < 0.1 % Threshold for stationarity
-        fprintf('✅ The process is likely Stationary.\n');
-    else
-        fprintf('❌ The process is NOT Stationary.\n');
-    end
-    
-    % 3️⃣ 📌 Compute Time Mean of a Single Realization
-    time_mean = mean(signal(1, :)); % Choose first realization
-    
-    % 4️⃣ 📌 Compute Mean Across All Realizations
-    mean_across_realizations = mean(ensemble_mean);
-    
-    % 📝 Ergodicity Conclusion
-    if abs(time_mean - mean_across_realizations) < 0.1 % Threshold for ergodicity
-        fprintf('✅ The process is likely Ergodic.\n');
-    else
-        fprintf('❌ The process is NOT Ergodic.\n');
-    end
-end
+% Polar RZ
+figure;
+plot(f, PSD_POLAR_RZ);
+title('Power Spectral Density for Polar RZ');
+xlabel('Frequency (Hz)');
+ylabel('Power/Frequency');
+
 
 
                                        
